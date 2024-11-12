@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+Bu projenin genel çalışma mantığını adım adım ve detaylı olarak açıklayayım:
+
+1. Proje Genel Yapısı
+Proje, müşteri ve hesap yönetimi yapan bir mikroservis mimarisine sahip.
+Bu mikroservis, müşterileri ve hesaplarını yönetmek için gerekli işlevsellikleri sağlar.
+Aşağıdaki temel bileşenlerden oluşur:
+
+Controller: HTTP isteklerini alır, iş mantığını uygulamak için servislere yönlendirir ve sonuçları döner.
+
+Service: İş mantığını içerir, repository'lerden veri alır ve dönüştürür.
+
+Repository: Veritabanına doğrudan erişim sağlayan katmandır.
+
+DTO (Data Transfer Object): Veriyi taşır ve servisler arasındaki veri paylaşımını sağlar.
+
+Test: Uygulamanın doğruluğunu test etmek için yazılmış birim ve entegrasyon testleri.
+
+2. Projenin Akışı
+a. Müşteri Bilgilerinin Yönetimi
+Müşteri Oluşturma ve Erişim:
+Kullanıcı bir müşteri oluşturmak istediğinde,
+müşteri bilgileri (id, name, surname) HTTP istekleri ile alınır.
+
+CustomerController sınıfındaki createCustomer metodu, müşteri bilgilerini CustomerService servisine iletir.
+CustomerService, veritabanında müşteri kaydını yapar (CustomerRepository kullanılarak).
+Müşteri kaydedildikten sonra,
+müşteri bilgileri CustomerDtoConverter sınıfı aracılığıyla bir CustomerDto'ya dönüştürülür ve HTTP yanıtı olarak gönderilir.
+
+Müşteri Bilgilerinin Getirilmesi:
+Bir müşteri bilgisi istenirse, CustomerController'daki getCustomerById metodu çalıştırılır.
+Bu metod, CustomerService'in getCustomerById fonksiyonunu çağırarak, müşteri bilgilerini alır.
+Eğer müşteri varsa, müşteri bilgileri DTO'ya dönüştürülüp yanıt olarak gönderilir.
+Eğer müşteri yoksa, CustomerNotFoundException hata mesajı döner.
+
+b. Hesap Yönetimi
+Hesap Oluşturma:
+
+Hesap oluşturulmak istendiğinde, AccountController sınıfındaki createAccount metodu devreye girer.
+Kullanıcıdan gelen CreateAccountRequest nesnesi, müşteri kimliği ve başlangıç bakiyesi içerir.
+AccountService, verilen müşteri ID'sini CustomerService'e ileterek müşteri bilgisini alır.
+Eğer müşteri bulunursa, Account nesnesi oluşturulur ve bu hesap bir Transaction ile başlatılır (başlangıç kredisi varsa).
+Hesap ve işlem kaydedildikten sonra,
+AccountDtoConverter kullanılarak bir AccountDto'ya dönüştürülür ve sonuç olarak HTTP yanıtı döner.
+Hesap Bilgilerinin Getirilmesi:
+
+AccountController'daki getAccountById metodu ile hesap bilgisi istenebilir.
+Bu metod, AccountService aracılığıyla hesap bilgilerini alır ve bu bilgiler DTO'ya dönüştürülüp geri gönderilir.
+c. Hesap ve Müşteri İlişkisi
+Customer ve Account arasındaki ilişki, Customer sınıfındaki Set<Account> ile sağlanır. Bir müşteri birden fazla hesaba sahip olabilir.
+
+    Hesaplar, müşteriyle ilişkilendirildikten sonra, hesap bilgileri CustomerDto'ya dahil edilir.
+    CustomerDto sınıfı, müşteri bilgilerini (id, name, surname) ve bu müşteriye ait hesapları içerir.
+
+    3. Veritabanı ve Repository Katmanı
+    AccountRepository, CustomerRepository, TransactionRepository: Bu repository'ler, veritabanı üzerinde CRUD işlemleri yapar. JpaRepository sınıfı,
+    Spring Data JPA tarafından sağlanan bir temel sınıftır.
+
+    Veri Kaydetme: accountRepository.save(account) gibi çağrılarla veritabanına yeni hesaplar,
+    müşteriler veya işlemler kaydedilir.
+
+    Veri Getirme: customerRepository.findById(id) gibi çağrılarla, veritabanından müşteriler veya hesaplar getirilir.
+
+    4. DTO (Data Transfer Object) Yapıları
+    DTO yapıları, servisler arası veri taşımak amacıyla kullanılır. Aşağıda DTO'ların nasıl çalıştığını açıklıyorum:
+    CustomerDto, AccountDto, TransactionDto: Bu DTO'lar, ilgili model sınıflarının (Customer, Account, Transaction) yalnızca verilerini taşır ve istemciye JSON formatında sunulacak şekilde yapılandırılır.
+    DTO'lar, genellikle veriyi dönüştürme ve API'lerde dışarıya sunma amacıyla kullanılır. Model sınıflarının iş mantığını içermezler, yalnızca veri taşırlar.
+    DTO'lar, kullanıcı arayüzünde gösterilecek veriyi organize etmek ve API ile veri alışverişi yapmak için kullanılır.
+
+    5. DTO Converter (Veri Dönüştürme)
+    AccountDtoConverter ve CustomerDtoConverter sınıfları, Account, Customer gibi model nesnelerini uygun DTO'lara dönüştürür.
+    Bu dönüşüm işlemi, genellikle veritabanından alınan model nesnelerinin istemciye daha anlamlı bir şekilde sunulmasını sağlar.
+    Örneğin, AccountDtoConverter, Account nesnesini alır ve gerekli bilgileri alarak bir AccountDto nesnesi oluşturur.
+
+    6. Servis Katmanı (Business Logic)
+    CustomerService ve AccountService sınıfları, iş mantığını içerir. Bu servisler, Controller'dan gelen istekleri işler ve repository'lerle etkileşime girerek veritabanından veri alır veya veri kaydeder.
+    Örneğin:
+    CustomerService sınıfı, müşteri verilerini alır, dönüştürür ve kullanıcıya sunar.
+    AccountService sınıfı, hesapla ilgili işlemleri (hesap oluşturma, bakiye güncelleme, işlem yapma) yönetir.
+    7. Transaction Yönetimi
+    Her hesapla ilişkili birden fazla işlem olabilir. Hesap oluşturulurken veya bakiyesi değiştirildiğinde, işlem (Transaction) kaydedilir.
+    TransactionService, işlem başlatmak ve veritabanına kaydetmek için kullanılır.
+    Her işlemde, miktar, işlem tipi (örneğin, INITIAL), tarih bilgisi gibi detaylar bulunur.
+    8. Test Yapıları
+    Unit Test: Her bir servis ve fonksiyonun bağımsız olarak test edilmesini sağlar.
+    Örneğin, AccountServiceTest sınıfı, hesap oluşturma işlevinin doğru çalışıp çalışmadığını test eder.
+    Integration Test: Tüm bileşenlerin (controller, service, repository) entegrasyonunu test eder.
+    AccountControllerTest gibi testler, controller seviyesindeki işlevselliği doğrular ve HTTP isteklerini taklit ederek sistemi test eder.
+    9. Test Akışı
+    Testlerde, mock nesneler kullanılarak dış bağımlılıklar izole edilir.
+    Örneğin, AccountServiceTest sınıfında customerService ve accountRepository gibi bağımlılıklar mocklanır,
+    böylece veritabanı yerine simüle edilmiş nesnelerle test yapılır.
+    Testler, belirli bir işlevin beklendiği gibi çalışıp çalışmadığını doğrular ve hata durumlarında uygun istisnaların fırlatıldığını kontrol eder.
+    Özetle:
+    Bu proje, müşteri ve hesap yönetimini sağlayan bir mikroservis olarak yapılandırılmıştır.
+    Veritabanı, DTO'lar, servisler ve controller'lar arasındaki etkileşim ile tüm işlevsellik sağlanmaktadır.
+    Kullanıcılar, HTTP istekleriyle müşteri oluşturma, hesap oluşturma gibi işlemleri gerçekleştirebilir,
+    bu işlemler backend'de iş mantığı ve veritabanı işlemleri ile yönetilir.
+<body>
+
+</body>
+</html>
